@@ -4,4 +4,6 @@ redis==8.0.1
 neo4j==5.27.0
 streamlit==1.41.1
 pandas==2.3.3
-constelario>=0.3.0
+pyarrow
+# a biblioteca do grafo nao esta no PyPI - instala direto do GitHub (exige Git)
+constelario @ git+https://github.com/DiegoXavier-hub/constelario.git

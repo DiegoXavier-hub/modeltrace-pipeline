@@ -27,6 +27,21 @@ Modelagem visual (referências 1:N + agregação/embedding): **[`docs/modelagem-
 
 ## 2. Como rodar
 
+### Windows — automático
+
+```bat
+instalar.bat            :: 1a vez: verifica Python/Docker/Git e instala tudo num .venv local
+executar_pipeline.bat    :: sobe a infra, popula o banco, gera o grafo e abre o Streamlit
+```
+
+`instalar.bat` confere se Python, Docker e Git estão no PATH (avisando onde baixar o que
+faltar), cria um ambiente virtual isolado em `.venv\` e instala as dependências ali —
+inclusive a biblioteca do grafo (`constelario`), que vem direto do GitHub. Ao final, roda
+[`verificar_ambiente.py`](verificar_ambiente.py) e confirma que cada biblioteca importa
+corretamente. Rode de novo sempre que quiser reconferir o ambiente.
+
+### Manual (qualquer sistema)
+
 ```bash
 # 1) Infra (Docker) — MongoDB + Redis Stack + Neo4j (GDS)
 docker compose -f docker-compose.pipeline.yml up -d
@@ -55,31 +70,40 @@ streamlit run streamlit_app.py
 ## 3. Estrutura de arquivos
 
 ```
-
-├── crud_pipeline.py            # ARQUIVO ÚNICO de CRUD (MongoDB + Redis)
-├── graph_pipeline.py           # grafo de conhecimento + GDS (Neo4j)
-├── grafo.html     # visualização interativa 2D/3D do grafo (gerada pelo script acima)
-├── streamlit_app.py            # protótipo de interface (reutiliza os dois repositórios)
-├── docker-compose.pipeline.yml # Mongo + Redis Stack + Neo4j (plugin graph-data-science)
+├── instalar.bat                 # 1a vez: verifica Python/Docker/Git, cria .venv, instala tudo
+├── verificar_ambiente.py        # checagem chamada pelo instalar.bat (cada lib importa?)
+├── executar_pipeline.bat        # sobe a infra, popula, gera o grafo e abre o Streamlit
+│
+├── crud_pipeline.py             # ARQUIVO ÚNICO de CRUD (MongoDB + Redis)
+├── graph_pipeline.py            # grafo de conhecimento + GDS (Neo4j)
+├── grafo_visual.py               # ARQUIVO ÚNICO da visualização do grafo (biblioteca constelario)
+├── grafo.html                    # gerado por grafo_visual.py — 2D/3D interativo (nao versionado)
+├── streamlit_app.py              # protótipo de interface (reutiliza as camadas acima)
+│
+├── docker-compose.pipeline.yml  # Mongo + Redis Stack + Neo4j (plugin graph-data-science)
 ├── requirements-pipeline.txt
-├── docs/apresentacao.html           # apresentação curta (abra no navegador; ← → navega)
-├── screenshots/                # prints de cada tela e de cada coleção
-│   ├── mt-01-dashboard.png ... mt-09-collections-gallery.png
-│   ├── mt-10-graph-2d.png / mt-12-graph-3d.png / mt-13-graph-community.png
-│   ├── mt-11-graph-nodeinfo.png        # painel de inspeção de nó (clique)
-│   └── mt-14-streamlit-grafo-tab.png   # aba "Grafo" dentro do Streamlit
-└── logs/
-    ├── crud_pipeline_output.log        # log de saída completo do pipeline de banco
-    ├── aggregation_1_leaderboard.json  # resultado do aggregation pipeline 1
-    ├── aggregation_2_feature_drivers.json  # resultado do aggregation pipeline 2
+│
+├── docs/                         # modelagem e material de referência
+│   ├── modelagem-er-simplificada.png
+│   └── modelagem-json-simplificada.json
+│
+├── screenshots/                 # print de cada tela e de cada coleção (atividade 1.4)
+│
+└── logs/                        # saída de cada pipeline (evidência da entrega)
+    ├── crud_pipeline_output.log
+    ├── aggregation_1_leaderboard.json
+    ├── aggregation_2_feature_drivers.json
     ├── collection_counts.json
     ├── collections_samples.json
-    ├── graph_pipeline_output.log       # log de saída completo do pipeline de grafo
-    ├── graph_export.json               # grafo completo (nós+arestas+propriedades GDS)
-    ├── graph_gds_top_similarity.json   # top pares de gds.nodeSimilarity
-    ├── graph_gds_top_pagerank.json     # top nós de gds.pageRank
-    └── graph_gds_communities.json      # comunidades de gds.louvain
+    ├── graph_pipeline_output.log
+    ├── graph_export.json           # grafo completo (nós+arestas+propriedades GDS)
+    ├── graph_gds_top_similarity.json
+    ├── graph_gds_top_pagerank.json
+    └── graph_gds_communities.json
 ```
+
+> A apresentação de slides é um projeto próprio (**ModelTrace-Apresentacao**), separado
+> deste repositório — não faz parte do pipeline.
 
 ---
 

@@ -9,6 +9,18 @@ echo   MongoDB + Redis + Neo4j (GDS) + Streamlit
 echo ============================================================
 echo.
 
+REM --- 0) Usa o ambiente virtual criado por instalar.bat, se existir ---
+set "PY=python"
+set "STREAMLIT=streamlit"
+if exist ".venv\Scripts\python.exe" (
+  set "PY=.venv\Scripts\python.exe"
+  set "STREAMLIT=.venv\Scripts\streamlit.exe"
+) else (
+  echo [aviso] .venv nao encontrado - usando o Python global.
+  echo         Recomendado: rode instalar.bat primeiro.
+  echo.
+)
+
 REM --- 1) Garante que o Docker Desktop esta rodando ---
 docker info >nul 2>&1
 if not errorlevel 1 goto dockerok
@@ -44,10 +56,10 @@ goto waitneo
 echo [neo4j] Bolt pronto.
 
 REM --- 4) Semeia MongoDB + Redis apenas se o banco estiver vazio ---
-python -c "import sys;from crud_pipeline import ModelTraceRepository as R;r=R();sys.exit(0 if r.db.predictions.count_documents({})>0 else 1)" >nul 2>&1
+"%PY%" -c "import sys;from crud_pipeline import ModelTraceRepository as R;r=R();sys.exit(0 if r.db.predictions.count_documents({})>0 else 1)" >nul 2>&1
 if errorlevel 1 (
   echo [seed] Banco vazio - semeando MongoDB + Redis ^(crud_pipeline.py^)...
-  python crud_pipeline.py
+  "%PY%" crud_pipeline.py
 ) else (
   echo [seed] MongoDB ja populado - pulando o seed.
 )
@@ -55,10 +67,10 @@ if errorlevel 1 (
 REM --- 5) Constroi o grafo Neo4j + GDS se ainda nao houver export ---
 if not exist "%~dp0logs\graph_export.json" (
   echo [grafo] Gerando grafo Neo4j + GDS ^(graph_pipeline.py^)...
-  python graph_pipeline.py
+  "%PY%" graph_pipeline.py
 ) else (
   echo [grafo] graph_export.json ja existe - pulando build.
-  echo         ^(Para refazer o grafo: python graph_pipeline.py^)
+  echo         ^(Para refazer o grafo: %PY% graph_pipeline.py^)
 )
 
 echo.
@@ -78,6 +90,6 @@ echo.
 
 REM --- 6) Libera a porta 8501 (re-execucao) e sobe o Streamlit ---
 powershell -NoProfile -Command "Get-NetTCPConnection -LocalPort 8501 -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique | ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }" >nul 2>&1
-streamlit run streamlit_app.py --server.port 8501
+"%STREAMLIT%" run streamlit_app.py --server.port 8501
 
 endlocal
