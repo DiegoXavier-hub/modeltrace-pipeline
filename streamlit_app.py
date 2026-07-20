@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 Rodar:
-    streamlit run docs/pipeline/streamlit_app.py
+    streamlit run streamlit_app.py
 """
 
 from __future__ import annotations
@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+import time
 from datetime import datetime, timezone
 
 import pandas as pd
@@ -26,6 +27,7 @@ from crud_pipeline import (  # noqa: E402
     iso,
     score_band,
 )
+from neo4j import GraphDatabase  # noqa: E402
 from pymongo import DESCENDING  # noqa: E402
 
 # ---------------------------------------------------------------------------
@@ -131,6 +133,23 @@ st.markdown(
       .mt-card{background:var(--mt-panel);border:1px solid var(--mt-stroke);border-radius:12px;
         padding:16px 18px;margin-bottom:10px}
       .mt-muted{color:var(--mt-muted);font-size:13px}
+
+      /* ---- pagina de status do servidor ---- */
+      .mt-status-banner{padding:13px 20px;border-radius:11px;font-weight:700;margin:4px 0 22px;
+        font-size:.95rem;letter-spacing:.02em}
+      .mt-status-banner.ok{background:#22c55e15;border:1px solid #22c55e4d;color:#4ade80}
+      .mt-status-banner.down{background:#ef444415;border:1px solid #ef44444d;color:#f87171}
+      .mt-status-card{background:var(--mt-panel);border:1px solid var(--mt-stroke);border-radius:14px;
+        padding:22px 18px;text-align:center;height:100%}
+      .mt-status-dot{width:13px;height:13px;border-radius:50%;margin:0 auto 12px}
+      .mt-status-name{font-size:1.1rem;font-weight:800;color:var(--mt-ink);margin-bottom:8px}
+      .mt-status-badge{display:inline-block;padding:3px 13px;border-radius:999px;font-size:.68rem;
+        font-weight:700;text-transform:uppercase;letter-spacing:.08em;border:1px solid;margin-bottom:12px}
+      .mt-status-desc{color:var(--mt-muted);font-size:.78rem;margin-bottom:10px;min-height:2.4em;
+        line-height:1.35}
+      .mt-status-detail{font-family:'IBM Plex Mono',monospace;font-size:.8rem;color:var(--mt-ink);
+        margin-bottom:5px;word-break:break-word}
+      .mt-status-latency{font-family:'IBM Plex Mono',monospace;font-size:.7rem;color:var(--mt-muted)}
     </style>
     """,
     unsafe_allow_html=True,
@@ -204,7 +223,8 @@ if total_preds == 0:
     st.stop()
 
 PAGES = ["Visão geral", "Nova decisão", "Predições", "Feedback", "Retenção",
-         "Desempenho", "Tempo real", "Casos similares", "Base de dados"]
+         "Desempenho", "Tempo real", "Casos similares", "Base de dados",
+         "Status do servidor"]
 st.sidebar.markdown('<div class="mt-navlabel">Navegação</div>', unsafe_allow_html=True)
 page = st.sidebar.radio("Telas", PAGES, label_visibility="collapsed")
 
@@ -557,3 +577,97 @@ elif page == "Base de dados":
         st.dataframe(pd.json_normalize(sample), use_container_width=True, hide_index=True)
     else:
         st.info("Conjunto de dados vazio.")
+
+
+# ===========================================================================
+# STATUS DO SERVIDOR
+# ===========================================================================
+elif page == "Status do servidor":
+    st.title("Status do servidor")
+    st.caption("Saúde dos três bancos que sustentam o pipeline, em tempo real.")
+
+    if st.button("Atualizar"):
+        st.rerun()
+
+    def _check(fn):
+        t0 = time.perf_counter()
+        try:
+            detail = fn()
+            return True, (time.perf_counter() - t0) * 1000, detail
+        except Exception as exc:  # noqa: BLE001 - qualquer falha de conexao interessa aqui
+            return False, (time.perf_counter() - t0) * 1000, str(exc).splitlines()[0][:80]
+
+    def _check_mongo() -> str:
+        info = repo.mongo.server_info()
+        return f"v{info['version']}"
+
+    def _check_redis() -> str:
+        info = repo.r.info("server")
+        return f"v{info.get('redis_version', '?')}"
+
+    def _check_neo4j() -> str:
+        uri = os.getenv("MT_NEO4J_URI", "bolt://localhost:7688")
+        user = os.getenv("MT_NEO4J_USER", "neo4j")
+        password = os.getenv("MT_NEO4J_PASSWORD", "modeltrace123")
+        driver = GraphDatabase.driver(uri, auth=(user, password))
+        try:
+            with driver.session(database=os.getenv("MT_NEO4J_DATABASE", "neo4j")) as session:
+                session.run("RETURN 1").consume()
+            return "GDS ativo"
+        finally:
+            driver.close()
+
+    SERVICES = [
+        ("MongoDB", "predições, projetos e modelos", _check_mongo),
+        ("Redis", "cache, contadores e estruturas probabilísticas", _check_redis),
+        ("Neo4j", "grafo de conhecimento e Graph Data Science", _check_neo4j),
+    ]
+    results = [(name, desc, *_check(fn)) for name, desc, fn in SERVICES]
+    all_ok = all(ok for _, _, ok, _, _ in results)
+
+    st.markdown(
+        f'<div class="mt-status-banner {"ok" if all_ok else "down"}">'
+        f'{"Todos os serviços operacionais" if all_ok else "Um ou mais serviços indisponíveis"}'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
+    cols = st.columns(3)
+    for col, (name, desc, ok, ms, detail) in zip(cols, results):
+        color = "#22c55e" if ok else "#ef4444"
+        with col:
+            st.markdown(
+                f'<div class="mt-status-card">'
+                f'<div class="mt-status-dot" style="background:{color};box-shadow:0 0 12px {color}99"></div>'
+                f'<div class="mt-status-name">{name}</div>'
+                f'<div class="mt-status-badge" style="color:{color};border-color:{color}66;'
+                f'background:{color}1f">{"online" if ok else "offline"}</div>'
+                f'<div class="mt-status-desc">{desc}</div>'
+                f'<div class="mt-status-detail">{detail}</div>'
+                f'<div class="mt-status-latency">{ms:.0f} ms</div>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
+    st.divider()
+    st.subheader("Dados")
+    counts = repo.collection_counts()
+    dcols = st.columns(4)
+    dcols[0].metric("Predições", f"{counts.get('predictions', 0):,}")
+    dcols[1].metric("Projetos", f"{counts.get('projects', 0):,}")
+    dcols[2].metric("Modelos", f"{counts.get('models', 0):,}")
+    dcols[3].metric("Notas de entidade", f"{counts.get('entity_notes', 0):,}")
+
+    graph_export_path = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), "logs", "graph_export.json")
+    if os.path.exists(graph_export_path):
+        with open(graph_export_path, encoding="utf-8") as f:
+            gpayload = json.load(f)
+        gstats = gpayload.get("stats", {})
+        st.caption(
+            f"Grafo: {gstats.get('nodes', '?')} nós · {gstats.get('edges', '?')} arestas · "
+            f"{gstats.get('communities', '?')} comunidades — gerado em "
+            f"{gpayload.get('generated_at') or '?'}"
+        )
+
+    st.caption(f"Última verificação: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}")

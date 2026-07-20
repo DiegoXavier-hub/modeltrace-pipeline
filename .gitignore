@@ -4,6 +4,8 @@ __pycache__/
 .pytest_cache/
 .venv/
 venv/
+cloudflared.exe
+cloudflared_tunnel.log
 grafo.html
 .DS_Store
 Thumbs.db

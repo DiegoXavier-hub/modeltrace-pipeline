@@ -28,7 +28,7 @@ echo [docker] Docker nao esta ativo - iniciando o Docker Desktop...
 start "" "C:\Program Files\Docker\Docker\Docker Desktop.exe"
 echo [docker] Aguardando o Docker subir (pode levar ~1 min)...
 :waitdocker
-timeout /t 4 >nul
+"%SystemRoot%\System32\timeout.exe" /t 4 >nul
 docker info >nul 2>&1
 if errorlevel 1 goto waitdocker
 :dockerok
@@ -50,7 +50,7 @@ if %_tries% geq 40 (
   echo [neo4j] Aviso: Bolt nao respondeu a tempo - seguindo mesmo assim.
   goto neook
 )
-timeout /t 3 >nul
+"%SystemRoot%\System32\timeout.exe" /t 3 >nul
 goto waitneo
 :neook
 echo [neo4j] Bolt pronto.

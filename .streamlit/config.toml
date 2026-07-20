@@ -1,0 +1,18 @@
+# Tema nativo do Streamlit (motor interno - o que o CSS do streamlit_app.py
+# nao alcanca, como tabelas/dataframes, selects e o menu de configuracoes).
+# Mesma paleta usada no CSS custom: dourado sobre ambar escuro.
+[theme]
+base = "dark"
+primaryColor = "#d9ad3f"
+backgroundColor = "#0a0806"
+secondaryBackgroundColor = "#181109"
+textColor = "#ecdfc2"
+font = "sans serif"
+
+[server]
+# Recomendado pelo Streamlit ao rodar atras de proxy/tunel (Cloudflare, ngrok):
+# sem isso, o navegador as vezes bloqueia o polling interno (_stcore/health)
+# por CORS quando a requisicao chega redirecionada/alterada no caminho.
+# O proprio Streamlit avisa: se enableCORS=false, desative tambem o XSRF.
+enableCORS = false
+enableXsrfProtection = false

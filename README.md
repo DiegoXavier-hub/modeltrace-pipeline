@@ -40,6 +40,31 @@ inclusive a biblioteca do grafo (`constelario`), que vem direto do GitHub. Ao fi
 [`verificar_ambiente.py`](verificar_ambiente.py) e confirma que cada biblioteca importa
 corretamente. Rode de novo sempre que quiser reconferir o ambiente.
 
+### Publicar na web (o PC vira o servidor)
+
+```bat
+publicar_na_web.bat
+```
+
+Faz tudo que o `executar_pipeline.bat` faz e, além disso, abre um **túnel público**
+(Cloudflare Tunnel) até o Streamlit local — o PC vira o servidor deste projeto, acessível
+por qualquer computador via um link `https://....trycloudflare.com`. O link aparece direto
+na tela ao final.
+
+Como funciona: **só o Streamlit atravessa o túnel** — MongoDB, Redis e Neo4j continuam
+só em `localhost`, nunca expostos à internet. O `cloudflared.exe` é baixado automaticamente
+na 1ª vez (fica local ao projeto, não precisa de admin nem de conta na Cloudflare).
+
+Limitações a saber:
+- O link muda toda vez que o script roda (túnel "quick", sem conta Cloudflare). Para um
+  endereço fixo, é preciso um domínio próprio configurado no Cloudflare Zero Trust.
+- O servidor só fica no ar enquanto o PC estiver ligado e o script rodando.
+- O Streamlit **não tem autenticação própria** — quem tiver o link consegue usar o app
+  inteiro (inserir/editar/remover dados de demonstração). Para uma entrega/demo isso é
+  aceitável; para algo sério, considere colocar o Cloudflare Access na frente do túnel.
+- Para parar: feche as duas janelas abertas (App e Link público) e rode
+  `docker compose -f docker-compose.pipeline.yml stop`.
+
 ### Manual (qualquer sistema)
 
 ```bash
@@ -73,6 +98,9 @@ streamlit run streamlit_app.py
 ├── instalar.bat                 # 1a vez: verifica Python/Docker/Git, cria .venv, instala tudo
 ├── verificar_ambiente.py        # checagem chamada pelo instalar.bat (cada lib importa?)
 ├── executar_pipeline.bat        # sobe a infra, popula, gera o grafo e abre o Streamlit
+├── publicar_na_web.bat          # o mesmo, + link publico via Cloudflare Tunnel
+├── aguardar_tunel.ps1           # helper do publicar_na_web.bat (le a URL do tunel)
+├── .streamlit/config.toml       # tema escuro nativo + CORS/XSRF (necessario p/ tunel)
 │
 ├── crud_pipeline.py             # ARQUIVO ÚNICO de CRUD (MongoDB + Redis)
 ├── graph_pipeline.py            # grafo de conhecimento + GDS (Neo4j)
