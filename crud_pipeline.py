@@ -78,14 +78,8 @@ def score_band(score: float) -> str:
     return "critical"
 
 
-# ---------------------------------------------------------------------------
-# Definicoes de dominio (projetos / modelos) usadas para popular o banco
-# ---------------------------------------------------------------------------
+# definicoes de dominio pra popular o banco
 
-# Projetos reais do portfolio do Diego (OneDrive/Projetos - Dados), mapeados para
-# decisoes de ML binarias que a plataforma ModelTrace observa. Features, modelos e
-# algoritmos foram extraidos do codigo-fonte real de cada projeto. Cada projeto vira
-# 1 no Project no grafo; seus modelos/versoes/entidades/predicoes descem em cascata.
 PROJECT_DEFS: list[dict[str, Any]] = [
     {
         "id": "proj_tcc_student_outcomes",
@@ -242,8 +236,6 @@ PROJECT_DEFS: list[dict[str, Any]] = [
     },
 ]
 
-# Metadados de features extraidos do codigo real de cada projeto. Usados para gerar
-# valores plausiveis no seed do Mongo e no formulario dinamico do INSERT.
 CATEGORICALS = {
     # TCC evasao
     "curso_origem": ["ADM_Integral", "ADM_Noturno", "GI"],
@@ -324,9 +316,7 @@ def feature_value(name: str) -> Any:
     return round(random.uniform(low, high), 4)
 
 
-# ===========================================================================
-# Repositorio: toda a interacao com Mongo + Redis
-# ===========================================================================
+# toda a interacao com Mongo + Redis
 
 
 class ModelTraceRepository:
@@ -391,7 +381,7 @@ class ModelTraceRepository:
 
     # =======================================================================
     # 2) POPULAR as principais colecoes
-    # =======================================================================
+     
     def seed_reference_data(self) -> dict[str, Any]:
         """Insere org, usuarios, projetos, modelos e versoes. Demonstra INSERT."""
         org_id = "org_ufu_gi_ops"
@@ -582,9 +572,7 @@ class ModelTraceRepository:
         step(f"{inserted} entity_notes inseridas (para demonstrar $lookup no pipeline 2).")
         return inserted
 
-    # =======================================================================
-    # Redis: INGESTAO em estruturas comuns + probabilisticas
-    # =======================================================================
+    # Redis INGESTAO em estruturas comuns probabilisticas
     def redis_ingest(self, pred: dict) -> None:
         r = self.r
         model_id = pred["model_id"]
